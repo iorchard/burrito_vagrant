@@ -1,21 +1,24 @@
 #!/bin/bash
 
 OUTPUT_DIR="$(pwd)/output"
+CR=$(type -p podman)
 
 function USAGE() {
-  echo "USAGE: $0 [-h|-b|-r] [CLOUD_IMAGE]" 1>&2
-  echo
-  echo " -h --help                   Display this help message."
-  echo " -b --build CLOUD_IMAGE      Build burrito iso."
-  echo " -r --run CLOUD_IMAGE        Run and go into the container."
-  echo
-  echo "ex) $0 --build /path/to/cloud_image_file"
-  echo
+  cat << EOF 1>&2
+  USAGE: $0 [-h|-b|-r] [CLOUD_IMAGE]
+  
+   -h --help                       Display this help message.
+   -b --build BURRITO_CLOUD_IMAGE  Build burrito iso.
+   -r --run BURRITO_CLOUD_IMAGE    Run and go into the container.
+  
+  ex) $0 --build /path/to/cloud_image_file
+EOF
+
 }
 function run() {
   _check "$@"
-  docker build -t docker.io/jijisa/burrito-vagrant .
-  docker run -it --rm \
+  ${CR} build -t docker.io/jijisa/burrito-vagrant .
+  ${CR} run -it --rm \
       -v $(pwd)/output:/output -v ${CLOUD_IMG}:${CLOUD_IMG} \
       --env OWNER_ID=${OWNER_ID} --env OWNER_GRP=${OWNER_GRP} \
       --env CLOUD_IMG=${CLOUD_IMG} \
@@ -24,9 +27,9 @@ function run() {
 }
 function build() {
   _check "$@"
-  docker build -t docker.io/jijisa/burrito-vagrant .
-  docker run -it --rm \
-      -v /tmp/output:/output -v ${CLOUD_IMG}:${CLOUD_IMG} \
+  ${CR} build -t docker.io/jijisa/burrito-vagrant .
+  ${CR} run -it --rm \
+	  -v $(pwd)/output:/output -v ${CLOUD_IMG}:${CLOUD_IMG} \
       --env OWNER_ID=${OWNER_ID} --env OWNER_GRP=${OWNER_GRP} \
       --env CLOUD_IMG=${CLOUD_IMG} \
       docker.io/jijisa/burrito-vagrant 

@@ -1,4 +1,4 @@
-ARG         FROM=docker.io/debian:bookworm-slim
+ARG         FROM=docker.io/library/debian:bookworm-slim
 FROM        ${FROM}
 
 ENV         WORKSPACE="/burrito_vagrant"
