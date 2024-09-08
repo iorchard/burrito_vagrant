@@ -1,7 +1,37 @@
 #!/bin/bash
 
-OUTPUT_DIR="$(pwd)/output"
+OUTPUT_DIR="/tmp/box_output"
 CR=$(type -p podman)
+
+#      --user ${OWNER_ID}:${OWNER_GRP} \
+#      --userns keep-id:uid=${OWNER_ID},gid=${OWNER_GRP} \
+function run() {
+  _check "$@"
+  ${CR} build -t docker.io/jijisa/burrito-vagrant .
+  ${CR} run -it --rm \
+      -v ${OUTPUT_DIR}:${OUTPUT_DIR} -v ${CLOUD_IMG}:${CLOUD_IMG} \
+      --env CLOUD_IMG=${CLOUD_IMG} \
+      --entrypoint=/bin/bash \
+      docker.io/jijisa/burrito-vagrant 
+}
+function build() {
+  _check "$@"
+  ${CR} build -t docker.io/jijisa/burrito-vagrant .
+  ${CR} run -it --rm \
+      -v ${OUTPUT_DIR}:${OUTPUT_DIR} -v ${CLOUD_IMG}:${CLOUD_IMG} \
+      --env CLOUD_IMG=${CLOUD_IMG} --env-file .env \
+      docker.io/jijisa/burrito-vagrant 
+}
+function _check() {
+  CLOUD_IMG=${1}
+  if [[ -z ${CLOUD_IMG} ]] || [[ ! -f ${CLOUD_IMG} ]]; then
+      echo "Abort) cannot find ${CLOUD_IMG}." 1>&2
+      USAGE
+      exit 1
+  fi
+
+  mkdir -p ${OUTPUT_DIR}
+}
 
 function USAGE() {
   cat << EOF 1>&2
@@ -13,38 +43,6 @@ function USAGE() {
   
   ex) $0 --build /path/to/cloud_image_file
 EOF
-
-}
-function run() {
-  _check "$@"
-  ${CR} build -t docker.io/jijisa/burrito-vagrant .
-  ${CR} run -it --rm \
-      -v $(pwd)/output:/output -v ${CLOUD_IMG}:${CLOUD_IMG} \
-      --env OWNER_ID=${OWNER_ID} --env OWNER_GRP=${OWNER_GRP} \
-      --env CLOUD_IMG=${CLOUD_IMG} \
-      --entrypoint=/bin/bash \
-      docker.io/jijisa/burrito-vagrant 
-}
-function build() {
-  _check "$@"
-  ${CR} build -t docker.io/jijisa/burrito-vagrant .
-  ${CR} run -it --rm \
-	  -v $(pwd)/output:/output -v ${CLOUD_IMG}:${CLOUD_IMG} \
-      --env OWNER_ID=${OWNER_ID} --env OWNER_GRP=${OWNER_GRP} \
-      --env CLOUD_IMG=${CLOUD_IMG} \
-      docker.io/jijisa/burrito-vagrant 
-}
-function _check() {
-  CLOUD_IMG=${1}
-  if [[ -z ${CLOUD_IMG} ]] || [[ ! -f ${CLOUD_IMG} ]]; then
-      echo "Abort) cannot find ${CLOUD_IMG}." 1>&2
-      USAGE
-      exit 1
-  fi
-  OWNER_ID=$(id -u)
-  OWNER_GRP=$(id -g)
-
-  mkdir -p ${OUTPUT_DIR}
 }
 if [ $# -lt 1 ]; then
   USAGE

@@ -4,21 +4,21 @@
 Control = {
   'num' => 1,
   'name_prefix' => 'control',
-  'cpus' => 4,
-  'memory' => 8,
+  'cpus' => 2,
+  'memory' => 4,
   'disk' => 50
 }
 Compute = {
   'num' => 1,
   'name_prefix' => 'compute',
-  'cpus' => 4,
+  'cpus' => 2,
   'memory' => 4,
   'disk' => 50
 }
 Storage = {
   'num' => 1,
   'name_prefix' => 'storage',
-  'cpus' => 4,
+  'cpus' => 2,
   'memory' => 4,
   'disk' => 50
 }
@@ -26,20 +26,23 @@ Storage = {
 OSD_SIZE = '50GB'
 
 USERNAME = 'clex'
-USERPW = '<clex password>'
+USERPW = 'vagrant'
 
-IP = <Put the last octet of ip> 
+# last octet of each ip address. See NET variable below.
+IP = 11
+# libvirt storage pool name
+POOL="default"
+BOX = 'iorchard/burrito'
 
 #################################################
 ### Do not edit below if you are not an expert.
 #################################################
 
 ENV['VAGRANT_DEFAULT_PROVIDER'] = 'libvirt'
-BOX = 'iorchard/burrito-8.10'
 NET = {
   'mgmt' => '192.168.20.',
-  'overlay' => '192.168.30.',
-  'provider' => '10.10.40.',
+  'provider' => '192.168.30.',
+  'overlay' => '192.168.40.',
   'storage' => '192.168.50.'
 }
 File.write("etchosts", "127.0.0.1 localhost\n")
@@ -75,25 +78,22 @@ systemctl restart sshd.service
 sudo mv hosts /etc/hosts
 growpart /dev/sda 1
 xfs_growfs /dev/sda1
-[ -f /tmp/i_am_the_first_controller ] && \
-  echo "192.168.121.1:/srv/iso /vagrant nfs ro 0 0" >> /etc/fstab || true
 reboot
 SHELL
 
 Vagrant.configure("2") do |config|
-  config.vm.synced_folder "/srv/iso/", "/vagrant",
-    type: "nfs", mount_options: ['ro']
   (1..Control['num']).each do |i|
     n = IP+(i-1)
     config.vm.define Control['name_prefix']+"#{i}" do |cfg|
       cfg.vm.box = BOX
+      cfg.vm.box_version = "2.1.0"
       cfg.ssh.username = USERNAME
       cfg.ssh.password = USERPW
       cfg.vm.provider "libvirt" do |vb|
         vb.cpus = Control['cpus']
         vb.memory = Control['memory'] * 1024
         vb.management_network_name = "service"
-        vb.storage_pool_name = "vagrant"
+        vb.storage_pool_name = POOL
         vb.machine_virtual_size = Control['disk']
         vb.disk_bus = 'scsi'
         vb.disk_device = 'sda'
@@ -103,12 +103,12 @@ Vagrant.configure("2") do |config|
         libvirt__network_name: "mgmt",
         libvirt__forward_mode: "none",
         libvirt__dhcp_enabled: "false"
-      cfg.vm.network "private_network", ip: NET['overlay'] + "#{n}",
-        libvirt__network_name: "tenant",
-        libvirt__forward_mode: "none",
-        libvirt__dhcp_enabled: "false"
       cfg.vm.network "private_network", ip: NET['provider'] + "#{n}",
         libvirt__network_name: "provider",
+        libvirt__dhcp_enabled: "false"
+      cfg.vm.network "private_network", ip: NET['overlay'] + "#{n}",
+        libvirt__network_name: "overlay",
+        libvirt__forward_mode: "none",
         libvirt__dhcp_enabled: "false"
       cfg.vm.network "private_network", ip: NET['storage'] + "#{n}",
         libvirt__network_name: "storage",
@@ -132,6 +132,7 @@ Vagrant.configure("2") do |config|
     n = (IP+Control['num'])+(i-1)
     config.vm.define Compute['name_prefix']+"#{i}" do |cfg|
       cfg.vm.box = BOX
+      cfg.vm.box_version = "2.1.0"
       cfg.ssh.username = USERNAME
       cfg.ssh.password = USERPW
       cfg.vm.provider "libvirt" do |vb|
@@ -140,7 +141,7 @@ Vagrant.configure("2") do |config|
         vb.nested = true
         vb.cpu_mode = "host-passthrough"
         vb.management_network_name = "service"
-        vb.storage_pool_name = "vagrant"
+        vb.storage_pool_name = POOL
         vb.machine_virtual_size = Compute['disk']
         vb.disk_bus = 'scsi'
         vb.disk_device = 'sda'
@@ -148,10 +149,10 @@ Vagrant.configure("2") do |config|
       cfg.vm.host_name = Compute['name_prefix'] + "#{i}"
       cfg.vm.network "private_network", ip: NET['mgmt'] + "#{n}",
         libvirt__network_name: "mgmt"
-      cfg.vm.network "private_network", ip: NET['overlay'] + "#{n}",
-        libvirt__network_name: "tenant"
       cfg.vm.network "private_network", ip: NET['provider'] + "#{n}",
         libvirt__network_name: "provider"
+      cfg.vm.network "private_network", ip: NET['overlay'] + "#{n}",
+        libvirt__network_name: "overlay"
       cfg.vm.network "private_network", ip: NET['storage'] + "#{n}",
         libvirt__network_name: "storage"
       cfg.vm.network "forwarded_port", guest: 22, host: 60000+n,
@@ -168,6 +169,7 @@ Vagrant.configure("2") do |config|
     n = IP+Control['num']+Compute['num']+(i-1)
     config.vm.define Storage['name_prefix']+"#{i}" do |cfg|
       cfg.vm.box = BOX
+      cfg.vm.box_version = "2.1.0"
       cfg.ssh.username = USERNAME
       cfg.ssh.password = USERPW
       cfg.vm.provider "libvirt" do |vb|
@@ -177,7 +179,7 @@ Vagrant.configure("2") do |config|
         vb.storage :file, :device => 'sdb', :size => OSD_SIZE, :bus => 'scsi'
         vb.storage :file, :device => 'sdc', :size => OSD_SIZE, :bus => 'scsi'
         vb.storage :file, :device => 'sdd', :size => OSD_SIZE, :bus => 'scsi'
-        vb.storage_pool_name = "vagrant"
+        vb.storage_pool_name = POOL
         vb.machine_virtual_size = 100
         vb.disk_bus = 'scsi'
         vb.disk_device = 'sda'
@@ -185,10 +187,10 @@ Vagrant.configure("2") do |config|
       cfg.vm.host_name = Storage['name_prefix'] + "#{i}"
       cfg.vm.network "private_network", ip: NET['mgmt'] + "#{n}",
         libvirt__network_name: "mgmt"
-      cfg.vm.network "private_network", ip: NET['overlay'] + "#{n}",
-        libvirt__network_name: "tenant"
       cfg.vm.network "private_network", ip: NET['provider'] + "#{n}",
         libvirt__network_name: "provider"
+      cfg.vm.network "private_network", ip: NET['overlay'] + "#{n}",
+        libvirt__network_name: "overlay"
       cfg.vm.network "private_network", ip: NET['storage'] + "#{n}",
         libvirt__network_name: "storage",
         libvirt__dhcp_enabled: "false"
@@ -204,4 +206,3 @@ Vagrant.configure("2") do |config|
     end
   end
 end
-

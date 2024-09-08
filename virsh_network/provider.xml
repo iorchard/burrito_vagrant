@@ -1,0 +1,6 @@
+<network>
+  <name>provider</name>
+  <bridge name="provider" />
+  <forward mode="nat" />
+  <ip address="192.168.40.1" netmask="255.255.255.0" />
+</network>
