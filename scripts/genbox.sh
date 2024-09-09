@@ -3,15 +3,15 @@
 set -eo pipefail
 
 CLOUD_IMG_FILENAME=$(basename ${CLOUD_IMG})
-BURRITO_VERSION=$(echo $CLOUD_IMG_FILENAME|cut -d'-' -f3|cut -d'_' -f1)
+VERSIONS=$(echo $CLOUD_IMG_FILENAME|cut -d'-' -f3)
+BURRITO_VERSION=${VERSIONS%_*}
+OS_VERSION=${VERSIONS#*_}
 BOX_FILENAME="${CLOUD_IMG_FILENAME%.*}.box"
 USERPW="${USERPW:-vagrant}"
 
 ${WORKSPACE}/scripts/prepare.sh
 
 cp ${CLOUD_IMG} ${OUTPUT_DIR}/box.img
-cp ${WORKSPACE}/scripts/info.json ${OUTPUT_DIR}/
-
 
 pushd ${OUTPUT_DIR}
   IMG_SIZE=$(qemu-img info --output=json "${OUTPUT_DIR}/box.img" | awk '/^\s{0,4}"virtual-size/{s=int($2)/(1024^3); print (s == int(s)) ? s : int(s)+1 }')
@@ -20,6 +20,14 @@ pushd ${OUTPUT_DIR}
     "provider": "libvirt",
     "format": "qcow2",
     "virtual_size": ${IMG_SIZE}
+}
+EOF
+  cat > info.json <<EOF
+{
+  "author": "Heechul Kim",
+  "homepage": "https://github.com/iorchard/burrito_vagrant",
+  "burrito_version": "${BURRITO_VERSION}",
+  "os_version": "Rocky Linux ${OS_VERSION}"
 }
 EOF
   cat > Vagrantfile <<EOF
