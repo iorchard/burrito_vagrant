@@ -2,48 +2,44 @@
 # vi: set ft=ruby :
 
 Control = {
-  'num' => 1,
+  'num' => 3,
   'name_prefix' => 'control',
-  'cpus' => 2,
-  'memory' => 4,
+  'cpus' => 8,
+  'memory' => 16,
   'disk' => 50
 }
 Compute = {
-  'num' => 1,
+  'num' => 2,
   'name_prefix' => 'compute',
-  'cpus' => 2,
-  'memory' => 4,
+  'cpus' => 4,
+  'memory' => 8,
   'disk' => 50
 }
 Storage = {
-  'num' => 1,
+  'num' => 3,
   'name_prefix' => 'storage',
-  'cpus' => 2,
-  'memory' => 4,
+  'cpus' => 4,
+  'memory' => 8,
   'disk' => 50
 }
 
 OSD_SIZE = '50GB'
 
-USERNAME = 'clex'
-USERPW = 'vagrant'
-
 # last octet of each ip address. See NET variable below.
 IP = 11
-# libvirt storage pool name
-POOL="default"
-# Box name and version
+# Box name 
 BOX = 'iorchard/burrito'
+# Box version: you can check the latest version at
+# https://portal.cloud.hashicorp.com/vagrant/discover/iorchard/burrito/versions
 BOX_VERSION = '2.1.0'
-
-# service network
-#SVC_NET_NAME = "service"
-#SVC_NET_ADDR = "192.168.10.0/24"
 
 #################################################
 ### Do not edit below if you are not an expert.
 #################################################
 
+USERNAME = 'clex'
+# libvirt storage pool name
+POOL="default"
 ENV['VAGRANT_DEFAULT_PROVIDER'] = 'libvirt'
 NET = {
   'service' => '192.168.10.',
@@ -82,7 +78,6 @@ Vagrant.configure("2") do |config|
   config.vm.box = BOX
   config.vm.box_version = BOX_VERSION
   config.ssh.username = USERNAME
-  config.ssh.password = USERPW
   config.vm.synced_folder ".", "/vagrant", disabled: true
   (1..Control['num']).each do |i|
     n = IP+(i-1)

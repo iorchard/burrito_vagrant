@@ -8,7 +8,7 @@ BURRITO_VERSION=${VERSIONS%_*}
 OS_VERSION=${VERSIONS#*_}
 BOX_FILENAME="${CLOUD_IMG_FILENAME%.*}.box"
 USERPW="${USERPW:-vagrant}"
-
+KEY_URL="https://raw.github.com/mitchellh/vagrant/master/keys/vagrant.pub"
 ${WORKSPACE}/scripts/prepare.sh
 
 cp ${CLOUD_IMG} ${OUTPUT_DIR}/box.img
@@ -40,7 +40,7 @@ Vagrant.configure("2") do |config|
 config.vm.define "new" do |burritobox|
        burritobox.vm.box = "iorchard/burrito"
        burritobox.vm.provider :libvirt do |burritovm|
-       burrito.cpus = 1
+       burritovm.cpus = 1
        burritovm.memory = 1024
        end
        end
@@ -49,8 +49,13 @@ EOF
   virt-customize \
         -a box.img \
         --root-password disabled \
-	--password-crypto sha512 \
-        --password clex:password:${USERPW}
+        --password-crypto sha512 \
+	--password clex:password:${USERPW} \
+	--run-command "mkdir -p /home/clex/.ssh" \
+	--run-command "chmod 0700 /home/clex/.ssh" \
+	--run-command "wget --no-check-certificate -O /home/clex/.ssh/authorized_keys ${KEY_URL}" \
+	--run-command "chmod 0600 /home/clex/.ssh/authorized_keys" \
+	--run-command "chown -R clex:clex /home/clex/.ssh"
   [[ -f ${BOX_FILENAME} ]] && rm -f ${BOX_FILENAME} || :
   tar cv -S --totals metadata.json info.json Vagrantfile box.img | \
     pigz -c > "${BOX_FILENAME}"  
@@ -67,6 +72,7 @@ EOF
          "providers" : [
             {
                "name" : "libvirt",
+               "architecture": "amd64",
                "url" : "file://${OUTPUT_DIR}/${BOX_FILENAME}",
                "checksum_type": "sha256",
                "checksum": "${BOX_CHECKSUM}"
